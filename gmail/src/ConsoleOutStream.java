@@ -2,27 +2,36 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import javax.swing.JTextArea;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.Document;
 
-public class ConsoleOutStream extends OutputStream{
-	private JTextArea textArea;
+public class ConsoleOutStream implements DocumentListener {
+	JTextArea textArea = new JTextArea();
 	
-    public ConsoleOutStream(JTextArea textArea) {
+	public ConsoleOutStream(JTextArea textArea) {
         this.textArea = textArea;
     }
+	
+	@Override
+	public void changedUpdate(DocumentEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
 
 	@Override
-	public void write(int b) throws IOException
-	{
-		byte[] bytes = {(byte)b};
-	    write(bytes,0,bytes.length);
+	public void insertUpdate(DocumentEvent arg0) {
+		// TODO Auto-generated method stub
+		
 	}
-	  
-	public void write(byte[] bytes, int offset, int length) throws IOException
-	{
-	    String s = new String(bytes, offset, length);
-	    textArea.append(s);
+
+	@Override
+	public void removeUpdate(DocumentEvent arg0) {
+		// TODO Auto-generated method stub
+		
 	}
-    
-    
-    
+
+	private void displayEditInfo(DocumentEvent e) {
+		Document document = (Document)e.getDocument();
+	}
 }

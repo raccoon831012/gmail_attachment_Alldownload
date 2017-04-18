@@ -11,6 +11,7 @@ import javax.mail.Multipart;
 import javax.mail.Part;
 import javax.mail.Session;
 import javax.mail.internet.*;
+import javax.swing.JTextArea;
 
 import com.sun.mail.gimap.GmailFolder;
 import com.sun.mail.gimap.GmailMessage;
@@ -28,6 +29,18 @@ public class Mailhandler {
     
     String foldername=null;
     
+    private JTextArea textArea;
+	
+    public Mailhandler(JTextArea textArea) {
+        this.textArea = textArea;
+    }
+    
+    private void printf(String str){
+    	textArea.append(str+"\n");
+    	
+    	System.out.println(str);
+    }
+    
 	public void SessionImap() throws MessagingException{
 		Properties props = new Properties();
 		props.put("mail.imap.host", "imap.gmail.com");
@@ -41,12 +54,13 @@ public class Mailhandler {
         store.connect(username, password);
         if(store.isConnected()){
         	isconnect = true;
-        	System.out.println(username+"connect successfully");
+        	printf(username+"connect successfully");
+        	//System.out.println(username+"connect successfully");
         }
 	}
 	
-	public void OpenFolder() throws MessagingException{
-		folder = (GmailFolder) store.getFolder("DSS_ASS");
+	public void OpenFolder(String list) throws MessagingException{
+		folder = (GmailFolder) store.getFolder(list);
         folder.open(Folder.READ_ONLY);
         ms = folder.getMessages();
         FetchProfile fp = new FetchProfile();
@@ -59,8 +73,8 @@ public class Mailhandler {
 
 	        for (int i=ms.length-1; i>-1; i--) {
 	            gm = (GmailMessage) ms[i];
-
-	            System.out.println(gm.getSubject());
+	            printf("title: "+gm.getSubject());
+	            //System.out.println(gm.getSubject());
 	            
 	            Multipart multipart = (Multipart) gm.getContent();
 	            for(int j=0;j<multipart.getCount();j++){
@@ -68,13 +82,18 @@ public class Mailhandler {
 	            	    if (Part.ATTACHMENT.equalsIgnoreCase(part.getDisposition())) {
 	            	        // this part is attachment
 	            	        // code to save attachment...
-	            	    	String filename = MimeUtility.decodeWord(part.getFileName());
+	            	    	String filename = part.getFileName();
+	            	    	if(filename.contains("UTF"))
+	            	    		filename = MimeUtility.decodeWord(part.getFileName());
 	            	    	
-	            	    	System.out.println(filename);
+	            	    	printf(filename);
+	            	    	//System.out.println(filename);
+	            	    	
 	            	    	if(issave)
-	            	    		part.saveFile(path + filename);
+	            	    		part.saveFile(path+ "/" + filename);
 	            	    }
 	            }
+	            printf("download done");
 	        }
 		}catch(IOException e) {
 			// TODO Auto-generated catch block

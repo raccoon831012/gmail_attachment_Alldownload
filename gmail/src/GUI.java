@@ -46,7 +46,7 @@ public class GUI extends JFrame {
 	private JTextField textField_folder;
 	private JPasswordField textField_password;
 	
-	Mailhandler mailhandler = new Mailhandler();
+	Mailhandler mailhandler;
 	/**
 	 * Launch the application.
 	 */
@@ -70,6 +70,9 @@ public class GUI extends JFrame {
 	 * @throws IOException 
 	 */
 	public GUI() throws NoSuchAlgorithmException, IOException {
+		JTextArea textArea = new JTextArea();
+		mailhandler = new Mailhandler(textArea);
+		
 		KeyGenerator keyGen = KeyGenerator.getInstance("AES");
 		keyGen.init(128,new SecureRandom( ) );
 		SecretKey secretKey = keyGen.generateKey();
@@ -103,17 +106,13 @@ public class GUI extends JFrame {
 		contentPane.add(panel_2);
 		panel_2.setLayout(new BorderLayout(0, 0));
 		
-		JTextArea textArea = new JTextArea();
+		
 		textArea.setEditable(false);
 		textArea.setFont(new Font("Microsoft JhengHei UI", Font.PLAIN, 13));
 		textArea.setLineWrap(true);
 		textArea.setWrapStyleWord(true);
 		panel_2.add(textArea, BorderLayout.CENTER);
 		
-		
-		PrintStream printStream = new PrintStream(new ConsoleOutStream(textArea));
-		System.setOut(printStream);
-		System.setErr(printStream);
 		
 		
 		JScrollPane scrollPane = new JScrollPane(textArea, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);;
@@ -141,7 +140,7 @@ public class GUI extends JFrame {
 		button_view.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				try {
-					mailhandler.OpenFolder();
+					mailhandler.OpenFolder((String)comboBox_folder.getSelectedItem());
 					mailhandler.DownloadMail(false);
 				} catch (MessagingException e) {
 					// TODO Auto-generated catch block
@@ -158,7 +157,7 @@ public class GUI extends JFrame {
 			public void actionPerformed(ActionEvent arg0) {
 				if(!mailhandler.path.isEmpty()){
 					try {
-						mailhandler.OpenFolder();
+						mailhandler.OpenFolder((String)comboBox_folder.getSelectedItem());
 						mailhandler.DownloadMail(true);
 					} catch (MessagingException e) {
 						// TODO Auto-generated catch block
