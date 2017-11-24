@@ -7,7 +7,6 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Scanner;
@@ -32,14 +31,14 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.text.DefaultCaret;
 
 import org.apache.commons.codec.binary.Hex;
-
-import gmail.Mailhandler;
 
 
 @SuppressWarnings("serial")
 public class GUI extends JFrame {
+	private static final int ALWAYS_UPDATE = 0;
 	private JPanel contentPane;
 	private JTextField textField_email;
 	//private JTextField textField_password;
@@ -51,7 +50,6 @@ public class GUI extends JFrame {
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
-		
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
@@ -72,6 +70,7 @@ public class GUI extends JFrame {
 	public GUI() throws NoSuchAlgorithmException, IOException {
 		JTextArea textArea = new JTextArea();
 		mailhandler = new Mailhandler(textArea);
+		//mailhandler.SetTextArea(textArea);
 		
 		KeyGenerator keyGen = KeyGenerator.getInstance("AES");
 		keyGen.init(128,new SecureRandom( ) );
@@ -113,13 +112,11 @@ public class GUI extends JFrame {
 		textArea.setWrapStyleWord(true);
 		panel_2.add(textArea, BorderLayout.CENTER);
 		
+		DefaultCaret caret = (DefaultCaret) textArea.getCaret();
+		caret.setUpdatePolicy(ALWAYS_UPDATE);
 		
-		
-		JScrollPane scrollPane = new JScrollPane(textArea, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);;
+		JScrollPane scrollPane = new JScrollPane(textArea, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		panel_2.add(scrollPane);
-		
-		
-		
 		
 		JPanel panel_1 = new JPanel();
 		panel_1.setBorder(new LineBorder(new Color(0, 0, 0)));
@@ -139,13 +136,18 @@ public class GUI extends JFrame {
 		button_view.setEnabled(false);
 		button_view.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				try {
-					mailhandler.OpenFolder((String)comboBox_folder.getSelectedItem());
-					mailhandler.DownloadMail(false);
-				} catch (MessagingException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+				(new Thread() {
+					public void run(){
+						try {
+							mailhandler.OpenFolder((String)comboBox_folder.getSelectedItem());
+							mailhandler.DownloadMail(false);
+						} catch (MessagingException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+				}).start();
+				
 			}
 		});
 		button_view.setBounds(11, 83, 116, 31);
@@ -155,17 +157,22 @@ public class GUI extends JFrame {
 		button_download.setEnabled(false);
 		button_download.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				if(!mailhandler.path.isEmpty()){
-					try {
-						mailhandler.OpenFolder((String)comboBox_folder.getSelectedItem());
-						mailhandler.DownloadMail(true);
-					} catch (MessagingException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+				(new Thread() {
+					public void run(){
+						if(!mailhandler.path.isEmpty()){
+							try {
+								mailhandler.OpenFolder((String)comboBox_folder.getSelectedItem());
+								mailhandler.DownloadMail(true);
+							} catch (MessagingException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+						}else{
+							System.out.println("Error: Empty path");
+						}
 					}
-				}else{
-					System.out.println("Error: Empty path");
-				}
+				}).start();
+				
 			}
 		});
 		button_download.setBounds(126, 83, 116, 31);
@@ -244,6 +251,7 @@ public class GUI extends JFrame {
 				SecretKey key = new SecretKeySpec(keycode, "AES");
 				//System.out.println(Hex.encodeHex(ivcode));
 				mailhandler.password = Decrypt(key, encoded, ivcode);
+				
 				textField_password.setText(mailhandler.password);
 			}
 		} catch (Exception e1) {
@@ -262,8 +270,14 @@ public class GUI extends JFrame {
 				try {
 					if(textField_email.getText().isEmpty()||
 							textField_password.getPassword().length==0){
-						System.out.println("please enter email or password!!!");}
+						System.out.println("please enter email or password!!!");
+					}
 					else{
+						char[] input = textField_password.getPassword();
+						mailhandler.password="";
+						for(char c: input)
+							mailhandler.password+=c;
+						
 						mailhandler.username = textField_email.getText();
 						
 						FileWriter writer = new FileWriter(auto, false);
@@ -285,10 +299,6 @@ public class GUI extends JFrame {
 						writer.flush();
 						writer.close();
 						
-						char[] input = textField_password.getPassword();
-						mailhandler.password="";
-						for(char c: input)
-							mailhandler.password+=c;
 						
 						mailhandler.SessionImap();
 						if(mailhandler.isconnect){
@@ -341,15 +351,16 @@ public class GUI extends JFrame {
 	}
 	
 	public static byte[] Encrypt(SecretKey secretKey, byte[] iv, String msg) throws Exception{
-		  Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING"); 
-		  cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(iv));    
-		  //System.out.println("AES_CBC_PKCS5PADDING IV:"+cipher.getIV());
-		  //System.out.println("AES_CBC_PKCS5PADDING Algoritm:"+cipher.getAlgorithm());
-		  byte[] byteCipherText = cipher.doFinal(msg.getBytes("UTF-8"));
-		  //System.out.println("加密結果的Base64編碼：" + Base64.getEncoder().encodeToString(byteCipherText));
+		
+		Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING"); 
+		cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(iv));    
+		//System.out.println("AES_CBC_PKCS5PADDING IV:"+cipher.getIV());
+		//System.out.println("AES_CBC_PKCS5PADDING Algoritm:"+cipher.getAlgorithm());
+		byte[] byteCipherText = cipher.doFinal(msg.getBytes("UTF-8"));
+		//System.out.println("加密結果的Base64編碼：" + Base64.getEncoder().encodeToString(byteCipherText));
 
-		  return byteCipherText;
-		 }
+		return byteCipherText;
+	}
 		 
 	public static String Decrypt(SecretKey secretKey, byte[] cipherText, byte[] iv) throws Exception{
 		//System.out.println("key: "+Hex.encodeHex(secretKey.getEncoded()));
